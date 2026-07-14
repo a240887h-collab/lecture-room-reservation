@@ -19,3 +19,7 @@ st.markdown(
 )
 
 st.info("左のサイドバーから各機能を選んでください。")
+
+st.subheader("登録（予約）")
+if st.button("登録（予約）を開く"):
+    st.switch_page("pages/kamoku_nakamura.py")
