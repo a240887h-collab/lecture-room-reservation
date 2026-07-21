@@ -7,6 +7,8 @@ DB_CONFIG = {
     "user": "student",
     "password": "student",
     "database": "sampledb",
+    "charset": "utf8mb4",
+    "use_unicode": True,
 }
 
 def get_connection():

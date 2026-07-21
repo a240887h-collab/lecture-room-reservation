@@ -1,5 +1,9 @@
 -- ============================================================
 -- 座席確保（講義室予約）schema.sql  ※班で1つに統一して共有する
+-- ============================================================
+-- 文字化け防止のため UTF-8 を明示する
+SET NAMES utf8mb4;
+ALTER DATABASE sampledb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 --   ・主キーは テーブル名_id + AUTO_INCREMENT（students は自然キー）
 --   ・日付は DATE、時刻は TIME、作成日時は DATETIME
 --   ・予約⇔時限の多対多は中間テーブル reservation_periods に分解
@@ -9,6 +13,8 @@
 -- 作り直せるように 子→親 の順で削除
 DROP TABLE IF EXISTS reservation_periods;
 DROP TABLE IF EXISTS reservations;
+DROP TABLE IF EXISTS lost_items;
+DROP TABLE IF EXISTS lost_item_statuses;
 DROP TABLE IF EXISTS reservation_statuses;
 DROP TABLE IF EXISTS periods;
 DROP TABLE IF EXISTS rooms;
@@ -44,6 +50,12 @@ CREATE TABLE reservation_statuses (
     status_name VARCHAR(20) NOT NULL UNIQUE             -- 予約済/利用済/キャンセル
 );
 
+-- 忘れ物ステータス（マスタ）
+CREATE TABLE lost_item_statuses (
+    status_id   INT         AUTO_INCREMENT PRIMARY KEY,
+    status_name VARCHAR(20) NOT NULL UNIQUE
+);
+
 -- 予約（記録テーブル）
 CREATE TABLE reservations (
     reservation_id INT          AUTO_INCREMENT PRIMARY KEY,          -- 予約ID
@@ -66,6 +78,22 @@ CREATE TABLE reservation_periods (
     PRIMARY KEY (reservation_id, period_id),            -- 複合主キーで重複防止
     FOREIGN KEY (reservation_id) REFERENCES reservations(reservation_id),
     FOREIGN KEY (period_id)      REFERENCES periods(period_id)
+);
+
+-- 忘れ物（記録テーブル）
+CREATE TABLE lost_items (
+    lost_item_id      INT          AUTO_INCREMENT PRIMARY KEY,
+    item_name         VARCHAR(100) NOT NULL,
+    category          VARCHAR(50)  NOT NULL,
+    found_place       VARCHAR(100) NOT NULL,
+    found_date        DATE         NOT NULL,
+    description       VARCHAR(255),
+    finder_student_no VARCHAR(20),
+    status_id         INT          NOT NULL,
+    claimant_name     VARCHAR(50),
+    created_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (finder_student_no) REFERENCES students(student_no),
+    FOREIGN KEY (status_id)         REFERENCES lost_item_statuses(status_id)
 );
 
 -- ============================================================
@@ -96,6 +124,9 @@ INSERT INTO periods (period_name, start_time, end_time) VALUES
 INSERT INTO reservation_statuses (status_name) VALUES
     ('予約済'), ('利用済'), ('キャンセル');
 
+INSERT INTO lost_item_statuses (status_name) VALUES
+    ('保管中'), ('返却済'), ('廃棄');
+
 INSERT INTO reservations (room_id, reserved_date, student_no, reserver_name, status_id, purpose) VALUES
     (1, '2026-07-10', '1244811075', '陳志遠',   1, 'ゼミの打ち合わせ'),
     (3, '2026-07-11', '1244810000', '田中太郎', 1, '勉強会');
@@ -105,3 +136,8 @@ INSERT INTO reservation_periods (reservation_id, period_id) VALUES
     (1, 1),
     (1, 2),
     (2, 3);
+
+INSERT INTO lost_items (
+    item_name, category, found_place, found_date, description, finder_student_no, status_id, claimant_name
+) VALUES
+    ('黒い傘', '傘', '1号館3階', '2026-07-12', '手元に白いテープあり', '1244811033', 1, NULL);
